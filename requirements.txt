@@ -1,0 +1,5 @@
+aiohttp==0.21.2
+chardet==2.3.0
+requests==2.9.1
+tqdm==3.8.0
+wheel==0.29.0
