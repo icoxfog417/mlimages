@@ -1,0 +1,5 @@
+* resize is done when making the training data
+* training data
+ * training data format -> [file_path, id]
+ * make training data from folder structure
+ * resize image
