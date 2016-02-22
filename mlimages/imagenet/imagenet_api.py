@@ -1,6 +1,6 @@
 import asyncio
 import requests
-from imageset.model import API
+from mlimages.model import API
 
 
 class ImagenetAPI(API):
@@ -41,6 +41,8 @@ class ImagenetAPI(API):
         urls = self.__split(requests.get(images_url).text)
 
         folder = self.file_api.join_relative(relative, descs[0].lower().replace(" ", "_"))
+        limited = "" if self.limit < 0 else "(limited to {0})".format(self.limit)
+        self.logger.info("{0} {1} images will be stored at {2}.".format(len(urls), limited, folder))
         await self._download_images(session, folder, urls)
         return folder
 

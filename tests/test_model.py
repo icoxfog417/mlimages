@@ -1,8 +1,8 @@
 import os
 import shutil
 from unittest import TestCase
-from imageset.model import API
-from imageset.imagenet import ImagenetAPI
+from mlimages.model import API
+from mlimages.imagenet import ImagenetAPI
 import tests.env as env
 
 
@@ -15,8 +15,8 @@ class TestModel(TestCase):
 
         folder = "work_animal"
         path = api.file_api.to_abs(folder)
-        api.label_dir(folder, 0, fname="test_label_fixed.txt")
-        api.label_dir_auto(folder, fname="test_label_auto.txt")
+        api.label_dir(0, relative=folder, label_path=os.path.join(p, "test_label_fixed.txt"))
+        api.label_dir_auto(relative=folder, label_path=os.path.join(p, "test_label_auto.txt"))
         # todo have to do some check
 
         shutil.rmtree(path)

@@ -1,6 +1,6 @@
 import os
 from unittest import TestCase
-from imageset.model import FileAPI
+from mlimages.model import FileAPI
 from tests.env import get_data_folder
 
 

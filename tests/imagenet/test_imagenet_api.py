@@ -1,7 +1,7 @@
 import os
 import shutil
 from unittest import TestCase
-from imageset.imagenet import ImagenetAPI
+from mlimages.imagenet import ImagenetAPI
 import tests.env as env
 
 

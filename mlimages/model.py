@@ -14,20 +14,29 @@ class ImageFile():
 
 class API():
 
-    def __init__(self, data_root, proxy="", proxy_user="", proxy_password="", parallel=-1, limit=-1):
+    def __init__(self, data_root, proxy="", proxy_user="", proxy_password="", parallel=-1, limit=-1, debug=False):
         self.file_api = FileAPI(data_root)
         self.proxy = proxy
         self.proxy_user = proxy_user
         self.proxy_password = proxy_password
         self.parallel = parallel
         self.limit = limit
+        self.logger = None
+        from logging import getLogger, StreamHandler, DEBUG, INFO
+        self.logger = getLogger(type(self).__name__)
+        handler = StreamHandler()
+        level = INFO if not debug else DEBUG
+        handler.setLevel(level)
+        self.logger.setLevel(level)
+        self.logger.addHandler(handler)
 
     def _gather(self):
         raise Exception("API has to implements gather method")
 
-    def label_dir_auto(self, relative, fname="dataset.txt", mode="w"):
+    def label_dir_auto(self, relative="", label_path="", mode="w"):
         path = self.file_api.to_abs(relative)
-        self.file_api.check_file(relative, fname, mode)
+        lpath = label_path if label_path else self.__get_default_path(relative)
+        self.file_api.check_file(lpath, mode)
 
         ls = os.listdir(path)
         ls.sort(key=str.lower)
@@ -39,22 +48,20 @@ class API():
             p = self.file_api.to_abs(rpath)
             if os.path.isdir(p) and not d.startswith("."):
                 labeled = self.__label_dir(rpath, label)
-                self.file_api.write_iter(relative, fname, mode, labeled)
+                self.file_api.write_iter(lpath, mode, labeled)
                 label += 1
             elif os.path.isfile(p) and self.file_api.is_image(d):
                 images.append(p)
         else:
             if len(images) > 0:
                 labeled = [self.__to_line(i, label) for i in images]
-                self.file_api.write_iter(relative, fname, mode, iter(labeled))
+                self.file_api.write_iter(lpath, mode, iter(labeled))
 
-        return path
-
-    def label_dir(self, relative, label, fname="dataset.txt", mode="w"):
-        path = self.file_api.check_file(relative, fname, mode)
+    def label_dir(self, label, relative="", label_path="", mode="w"):
+        lpath = label_path if label_path else self.__get_default_path(relative)
+        self.file_api.check_file(lpath, mode)
         labeled = self.__label_dir(relative, label)
-        self.file_api.write_iter(relative, fname, mode, labeled)
-        return path
+        self.file_api.write_iter(lpath, mode, labeled)
 
     def __label_dir(self, relative, label):
         for p in self.file_api.ls_images(relative):
@@ -62,6 +69,13 @@ class API():
 
     def __to_line(self, path, label):
         return path + " " + str(label) + "\n"
+
+    def __get_default_path(self, relative=""):
+        p = self.file_api.to_abs(relative)
+        dirs = os.path.split(p)
+        d_fname = ("dataset" if len(dirs) == 0 else dirs[-1]) + ".txt"
+        d_path = os.path.abspath(os.path.join(os.getcwd() + "./" + d_fname))
+        return d_path
 
     def create_session(self, loop):
         conn = None
@@ -99,8 +113,7 @@ class API():
                     with open(self.file_api.to_abs(p), "wb") as f:
                         f.write(await r.read())
         except Exception as ex:
-            # todo: appropriate logging
-            pass
+            self.logger.warning("image is not found: {0}".format(image_url))
 
     def download_dataset(self, url, relative):
         r = requests.get(url, stream=True)
@@ -168,17 +181,12 @@ class FileAPI():
                     abs = os.path.abspath(os.path.join(root, f))
                     yield abs
 
-    def check_file(self, relative, fname, mode):
-        path = self.to_abs(relative)
-        fpath = os.path.join(path, fname)
-
-        if mode == "w" and os.path.isfile(fpath):
+    def check_file(self, path, mode):
+        _p = self.to_abs(path)
+        if mode == "w" and os.path.isfile(_p):
             raise Exception("Can not remove the file")
 
-        return os.path.abspath(fpath)
-
-    def write_iter(self, relative, fname, mode, iterator):
-        path = os.path.join(self.to_abs(relative), fname)
+    def write_iter(self, path, mode, iterator):
         _m = "wb" if mode == "w" else "ab"
         if os.path.isfile(path):
             _m = "ab"
