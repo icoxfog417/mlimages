@@ -17,7 +17,7 @@ pip install mlimages
 
 ### Imagenet
 
-Confirm the wnid on the [ImageNet site](http://image-net.org/synset)
+Confirm the **WordnetID** on the [ImageNet site](http://image-net.org/synset)
 
 ![imagenet](./doc/imagenet.PNG)
 
