@@ -1,0 +1,3 @@
+glacier\one.jpg 0
+glacier\two.jpg 1
+glacier\three.jpg 2

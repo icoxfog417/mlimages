@@ -9,5 +9,10 @@ def get_data_folder():
     return p
 
 
+def get_imread_file():
+    p = os.path.join(os.path.dirname(__file__), "data_imread/label.txt")
+    return p
+
+
 def get_path(relative):
     return os.path.join(get_data_folder(), relative)

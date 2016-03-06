@@ -3,13 +3,97 @@ import asyncio
 import requests
 import aiohttp
 from urllib.parse import urlparse
+from PIL import Image
+
+
+def create_logger(name, debug=False):
+    logger = None
+    from logging import getLogger, StreamHandler, DEBUG, INFO
+    logger = getLogger(name)
+    handler = StreamHandler()
+    level = INFO if not debug else DEBUG
+    handler.setLevel(level)
+    logger.setLevel(level)
+    logger.addHandler(handler)
+    return logger
 
 
 class ImageFile():
 
-    def __init__(self, path, label=0):
+    def __init__(self):
+        pass
+
+    @classmethod
+    def read(cls, path, img_root="", image_label_separator=None, debug=False):
+        logger = create_logger(cls.__name__, debug)
+        root = img_root if img_root else os.path.dirname(path)
+        sep = image_label_separator
+        if not sep:
+            sep = lambda ln: ln.strip().split()
+
+        with open(path, mode="r", encoding="utf-8") as f:
+            for line in f:
+                im_path, label = sep(line)
+                im_path = im_path if not root else os.path.join(root, im_path)
+                try:
+                    im = IM(im_path, label)
+                    im.read()
+                    yield im
+                except Exception as ex:
+                    logger.error(str(ex))
+
+
+class IM():
+
+    def __init__(self, path, label=-1):
         self.path = path # path to image file
         self.label = label # label for this image
+        self.image = None
+
+    def read(self):
+        self.image = Image.open(self.path)
+        return self
+
+    def to_grayscale(self):
+        self.image = self.image.convert("L")
+        return self
+
+    def downscale(self, width, height=-1):
+        h = height if height > 0 else width
+        self.image.thumbnail((width, h))
+        return self
+
+    def crop_from_lefttop(self, left, top, width, height=-1):
+        h = height if height > 0 else width
+        self.image = self.image.crop((left, top, left + width, top + height))
+        return self
+
+    def crop_from_center(self, width, height=-1):
+        h = height if height > 0 else width
+        im_width, im_height = self.image.size
+        get_bound = lambda length, size: int((length - size) / 2)
+        # if image length < width, 0 padding is done
+        self.crop_from_lefttop(get_bound(im_width, width), get_bound(im_height, h), width, h)
+        return self
+
+    def to_array(self, numpy_pkg, color=True):
+        # https://github.com/BVLC/caffe/blob/master/python/caffe/io.py
+
+        # image(width x height) -> matrix(column=width, row=height) = H x W matrix
+        img = numpy_pkg.asarray(self.image, dtype=numpy_pkg.float32)
+        if img.ndim == 2:
+            # don't have color dimension
+            img = img[:, :, numpy_pkg.newaxis]
+            if color:
+                img = numpy_pkg.tile(img, (1, 1, 3))
+        elif img.shape[2] == 4:
+            # RGB + A format
+            img = img[:, :, :3]
+
+        # H x W x K -> K x H x W
+        img = img.transpose(2, 0, 1)
+
+        return img
 
 
 class API():
@@ -21,14 +105,7 @@ class API():
         self.proxy_password = proxy_password
         self.parallel = parallel
         self.limit = limit
-        self.logger = None
-        from logging import getLogger, StreamHandler, DEBUG, INFO
-        self.logger = getLogger(type(self).__name__)
-        handler = StreamHandler()
-        level = INFO if not debug else DEBUG
-        handler.setLevel(level)
-        self.logger.setLevel(level)
-        self.logger.addHandler(handler)
+        self.logger = create_logger(type(self).__name__, debug)
 
     def _gather(self):
         raise Exception("API has to implements gather method")
@@ -51,7 +128,7 @@ class API():
                 self.file_api.write_iter(lpath, mode, labeled)
                 label += 1
             elif os.path.isfile(p) and self.file_api.is_image(d):
-                images.append(p)
+                images.append(self.file_api.to_rel(p))
         else:
             if len(images) > 0:
                 labeled = [self.__to_line(i, label) for i in images]
@@ -112,6 +189,8 @@ class API():
                 if r.status == 200 and self.file_api.get_file_name(r.url) == fname:
                     with open(self.file_api.to_abs(p), "wb") as f:
                         f.write(await r.read())
+        except FileNotFoundError as ex:
+            self.logger.error("{0} is not found.".format(p))
         except Exception as ex:
             self.logger.warning("image is not found: {0}".format(image_url))
 
@@ -134,6 +213,10 @@ class FileAPI():
 
     def to_abs(self, relative):
         p = os.path.abspath(os.path.join(self.root, "./" + relative))
+        return p
+
+    def to_rel(self, abspath):
+        p = os.path.relpath(abspath, self.root)
         return p
 
     def prepare_dir(self, relative):
@@ -161,10 +244,9 @@ class FileAPI():
         return fname
 
     def join_relative(self, relative, path):
-        sp = lambda p: [f for f in p.split("/") if f]
-        ps = sp(relative) + sp(path)
-        joined = "/".join(ps) + "/"
-        return joined
+        p = os.path.join(relative, path)
+        relp = os.path.join(os.path.relpath(p), "")  # append final / everytime
+        return relp
 
     def is_image(self, fname):
         extensions = [".jpeg", ".jpg", ".png", ".gif"]
@@ -178,8 +260,9 @@ class FileAPI():
         for root, dirs, files in os.walk(path):
             for f in files:
                 if self.is_image(f):
-                    abs = os.path.abspath(os.path.join(root, f))
-                    yield abs
+                    reldir = os.path.relpath(root, self.root)
+                    rel = os.path.join(reldir, f)
+                    yield rel
 
     def check_file(self, path, mode):
         _p = self.to_abs(path)
