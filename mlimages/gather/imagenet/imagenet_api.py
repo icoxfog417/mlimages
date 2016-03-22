@@ -1,6 +1,6 @@
 import asyncio
 import requests
-from mlimages.model import API
+from mlimages.gather import API
 
 
 class ImagenetAPI(API):

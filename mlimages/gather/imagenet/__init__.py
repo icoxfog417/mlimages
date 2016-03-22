@@ -1,1 +1,1 @@
-from mlimages.imagenet.imagenet_api import ImagenetAPI
+from mlimages.gather.imagenet.imagenet_api import ImagenetAPI

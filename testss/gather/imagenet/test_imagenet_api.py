@@ -1,8 +1,8 @@
 import os
 import shutil
 from unittest import TestCase
-from mlimages.imagenet import ImagenetAPI
-import tests.env as env
+from mlimages.gather.imagenet import ImagenetAPI
+import testss.env as env
 
 
 class TestImagenetAPI(TestCase):
@@ -16,7 +16,7 @@ class TestImagenetAPI(TestCase):
         self.assertTrue(os.path.isdir(path))
         shutil.rmtree(path)
 
-    def test_gather_wnids(self):
+    def test_gather_subset(self):
         p = env.get_data_folder()
         api = ImagenetAPI(p, limit=3)
         api.gather("n09289331", include_subset=True)
@@ -25,7 +25,7 @@ class TestImagenetAPI(TestCase):
         self.assertTrue(os.path.isdir(path))
 
         for f in ["alpine_glacier", "continental_glacier", "piedmont_glacier"]:
-            path = env.get_path("glacier/" + f)
-            self.assertTrue(os.path.isdir(path))
+            p = env.get_path("glacier/" + f)
+            self.assertTrue(os.path.isdir(p))
 
         shutil.rmtree(path)

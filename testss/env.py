@@ -9,8 +9,13 @@ def get_data_folder():
     return p
 
 
-def get_imread_file():
+def get_label_file_path():
     p = os.path.join(os.path.dirname(__file__), "data_imread/label.txt")
+    return p
+
+
+def get_image_path():
+    p = os.path.join(os.path.dirname(__file__), "data_imread/glacier/one.jpg")
     return p
 
 

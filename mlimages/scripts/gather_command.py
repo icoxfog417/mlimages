@@ -1,8 +1,7 @@
 import os
 import argparse
 
-
-if __name__ == "__main__":
+def make_parser():
     parser = argparse.ArgumentParser(description="Gather Image Dataset")
 
     parser.add_argument("-path", type=str, help="path to data folder", default="")
@@ -13,9 +12,9 @@ if __name__ == "__main__":
     parser.add_argument("--wnid", type=str, help="target wnid")
     parser.add_argument("--subset", action="store_true", help="download child subset")
 
+    return parser
 
-    args = parser.parse_args()
-
+def main(args):
     current = os.getcwd()
     path = args.path if args.path else os.path.join(current, "data/")
     parallel = args.parallel
@@ -23,7 +22,12 @@ if __name__ == "__main__":
 
     api = None
     if args.imagenet:
-        from mlimages.imagenet import ImagenetAPI
+        from mlimages.gather.imagenet import ImagenetAPI
         api = ImagenetAPI(path, parallel=parallel, limit=limit)
         api.logger.info("start to gather the ImageNet images.")
         api.gather(wnid=args.wnid, include_subset=args.subset)
+
+if __name__ == "__main__":
+    ps = make_parser()
+    args = ps.parse_args()
+    main(args)
