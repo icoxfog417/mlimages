@@ -5,18 +5,20 @@ setup(
     name="mlimages",
     packages=[
         "mlimages",
-        "mlimages.imagenet"
+        "mlimages.gather",
+        "mlimages.scripts",
+        "mlimages.util",
     ],
     install_requires=[
         "requests",
         "aiohttp"
     ],
-    version="0.1",
-    description="gather and create image dataset for machine learning",
+    version="0.2",
+    description="gather image data and create training data for machine learning",
     author="icoxfog417",
     author_email="icoxfog417@yahoo.co.jp",
     url="https://github.com/icoxfog417/mlimages",
-    download_url="https://github.com/icoxfog417/mlimages/tarball/0.1",
+    download_url="https://github.com/icoxfog417/mlimages/tarball/0.2",
     keywords = ["imagenet", "machine learning"],
     classifiers=[],
 )
