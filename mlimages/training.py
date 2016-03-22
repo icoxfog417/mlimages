@@ -1,4 +1,5 @@
 import os
+import asyncio
 from PIL import Image
 import numpy as np
 from mlimages.model import LabelFile, LabeledImage
@@ -53,6 +54,13 @@ class TrainingData():
         self.mean_image_file = m_file
 
     def generate(self):
+        mean = self.__load_mean()
+
+        for im in self.fetch():
+            arr = self.__to_array(im, mean)
+            yield  arr, im.label
+
+    def __load_mean(self):
         mean = None
         if self.mean_image_file:
             if os.path.isfile(self.mean_image_file):
@@ -63,15 +71,44 @@ class TrainingData():
                 raise Exception("Mean image is not exist at {0}.".format(self.mean_image_file))
         else:
             self.label_file._logger.warning("Mean image is not set. So if you train the model, it will be difficult to converge.")
+        return mean
 
-        for im in self.fetch():
-            arr = im.to_array(np, color=self.color)
-            if mean is not None:
-                arr -= mean
-            if self.scale > 0:
-                arr /= self.scale
-            yield  arr
-        
+    def __to_array(self, im, mean):
+        arr = im.to_array(np, color=self.color)
+        if mean is not None:
+            arr -= mean
+        if self.scale > 0:
+            arr /= self.scale
+        return arr
+
+    def generate_batches(self, size):
+        mean = self.__load_mean()
+
+        async def to_array(im):
+            im.load()
+            converted = self.convert(im)
+            return self.__to_array(converted, mean), im.label
+
+        batch = []
+        loop = asyncio.get_event_loop()
+
+        for im in self.label_file.fetch(load_image=False):
+            batch.append(to_array(im))
+
+            if len(batch) == size:
+                tasks = asyncio.wait(batch)
+                done, pending = loop.run_until_complete(tasks)
+                x_sample, y_sample = list(done)[0].result()
+                x_batch = np.ndarray((size,) + x_sample.shape, x_sample.dtype)
+                y_batch = np.ndarray((size,), np.int32)
+
+                for j, d in enumerate(done):
+                    x_batch[j], y_batch[j] = d.result()
+
+                yield x_batch, y_batch
+                i = 0
+                batch.clear()
+
     def result_to_image(self, arr, label=-1):
         restore_arr = arr * self.scale
 

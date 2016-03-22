@@ -21,7 +21,7 @@ class LabelFile():
         self._debug = debug
         self._logger = LogAPI.create_logger(self.__class__.__name__, self._debug)
 
-    def fetch(self):
+    def fetch(self, load_image=True):
 
         with open(self.path, mode="r", encoding="utf-8") as f:
             for line in f:
@@ -29,7 +29,8 @@ class LabelFile():
                 im_path = im_path if not self.img_root else os.path.join(self.img_root, im_path)
                 try:
                     im = LabeledImage(im_path, label)
-                    im.load()
+                    if load_image:
+                        im.load()
                     yield im
                 except Exception as ex:
                     self._logger.error(str(ex))
