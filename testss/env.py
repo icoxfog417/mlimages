@@ -1,5 +1,6 @@
 import os
 
+LABEL_FILE_COUNT = 3
 
 def get_data_folder():
     p = os.path.join(os.path.dirname(__file__), "data")

@@ -2,6 +2,13 @@
 setup.cfg
 setup.py
 mlimages\__init__.py
+mlimages\label.py
 mlimages\model.py
-mlimages\imagenet\__init__.py
-mlimages\imagenet\imagenet_api.py
+mlimages\training.py
+mlimages\gather\__init__.py
+mlimages\scripts\__init__.py
+mlimages\scripts\gather_command.py
+mlimages\scripts\label_command.py
+mlimages\util\__init__.py
+mlimages\util\file_api.py
+mlimages\util\log_api.py

@@ -1,4 +1,5 @@
 import os
+import random
 from PIL import Image
 import mlimages.util.log_api as LogAPI
 
@@ -33,6 +34,19 @@ class LabelFile():
                 except Exception as ex:
                     self._logger.error(str(ex))
 
+    def shuffle(self):
+        """
+        This method creates new shuffled file.
+        """
+
+        name, ext = os.path.splitext(os.path.basename(self.path))
+        shuffled = name + "_shuffled" + ext
+        shuffled = os.path.join(os.path.dirname(self.path), shuffled)
+
+        lines = open(self.path).readlines()
+        random.shuffle(lines)
+        open(shuffled, "w").writelines(lines)
+        self.path = shuffled
 
     def to_training_data(self, image_property=None):
         from mlimages.training import TrainingData

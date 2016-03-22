@@ -28,6 +28,9 @@ class TrainingData():
 
         return _im
 
+    def shuffle(self):
+        self.label_file.shuffle()
+
     def make_mean_image(self, mean_image_file=""):
         m_file = mean_image_file if mean_image_file else os.path.join(self.label_file.path, "./mean_image.png")
         im_iterator = self.label_file.fetch()
@@ -68,7 +71,7 @@ class TrainingData():
             if self.scale > 0:
                 arr /= self.scale
             yield  arr
-
+        
     def result_to_image(self, arr, label=-1):
         restore_arr = arr * self.scale
 

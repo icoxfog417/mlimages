@@ -59,16 +59,26 @@ class TestModel(TestCase):
         # restored.image.show("restored image")
 
     def test_label_file(self):
-        LINES = 3
-        p = env.get_label_file_path()
-        img_root = os.path.dirname(p)
+        lf = self.get_label_file()
+        images = list(lf.fetch())
+        self.assertEqual(env.LABEL_FILE_COUNT, len(images))
 
-        lf = LabelFile(p, img_root=img_root)
-        files = list(lf.fetch())
-        self.assertEqual(LINES, len(files))
+    def test_label_file_shuffle(self):
+        lf = self.get_label_file()
+        lf.shuffle()
+        images = list(lf.fetch())
+        self.assertEqual(env.LABEL_FILE_COUNT, len(images))
+        os.remove(lf.path)
 
     def get_labeled_image(self):
         p = env.get_image_path()
         im = LabeledImage(p, 1)
         im.load()
         return im
+
+    def get_label_file(self):
+        p = env.get_label_file_path()
+        img_root = os.path.dirname(p)
+
+        lf = LabelFile(p, img_root=img_root)
+        return lf
