@@ -2,8 +2,9 @@ import os
 import shutil
 from unittest import TestCase
 from mlimages.model import API
-from mlimages.model import ImageFile
+from mlimages.model import LabelFile
 from mlimages.imagenet import ImagenetAPI
+import numpy as np
 import tests.env as env
 
 
@@ -25,7 +26,7 @@ class TestModel(TestCase):
     def test_imread(self):
         LINES = 3
         f = env.get_imread_file()
-        files = list(ImageFile.read(f))
+        files = list(LabelFile().read(f))
         self.assertEqual(LINES, len(files))
 
         try:
@@ -51,10 +52,9 @@ class TestModel(TestCase):
             raise ex
 
     def test_im_to_array(self):
-        import numpy as np
 
         f = env.get_imread_file()
-        files = list(ImageFile.read(f))
+        files = list(LabelFile().read(f))
         im = files[0]
         im.crop_from_center(200, 300)
 
@@ -68,9 +68,21 @@ class TestModel(TestCase):
         self.assertEqual(arr.shape[1], 300)
         self.assertEqual(arr.shape[2], 200)
 
+    def test_to_array_from_array(self):
+        from PIL import Image
+        f = env.get_imread_file()
+        im = list(LabelFile().read(f))[0]
+
+        arr = np.asarray(im.image)
+        reversed = Image.fromarray(arr)
+
+        self.assertEqual(arr.shape, np.asarray(reversed).shape)
+        self.assertEqual(arr.sum(), np.asarray(reversed).sum())
+
+
     def test_download(self):
         api = API(env.get_data_folder())
-        f = "test.xml"
-        api.download_dataset("http://www.image-net.org/api/xml/structure_released.xml", f)
+        f = "test.md"
+        api.download_dataset("https://raw.githubusercontent.com/icoxfog417/mlimages/master/README.md", f)
         self.assertTrue(api.file_api.to_abs(f))
         os.remove(api.file_api.to_abs(f))

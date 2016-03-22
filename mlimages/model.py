@@ -2,13 +2,13 @@ import os
 import asyncio
 import requests
 import aiohttp
+from logging import getLogger, StreamHandler, DEBUG, INFO
 from urllib.parse import urlparse
 from PIL import Image
 
 
 def create_logger(name, debug=False):
     logger = None
-    from logging import getLogger, StreamHandler, DEBUG, INFO
     logger = getLogger(name)
     handler = StreamHandler()
     level = INFO if not debug else DEBUG
@@ -18,32 +18,103 @@ def create_logger(name, debug=False):
     return logger
 
 
-class ImageFile():
+class LabelFile():
+    """
+    LabelFile is constructed by the lines of (path to image file, label).
+    The relative `path to image file` is allowed. If you want to do it, please set `img_root`.
+    """
 
-    def __init__(self):
-        pass
+    def __init__(self, path, img_root="", image_label_separator=" ", mean_image_file="", scale=255, color=True, debug=False):
+        """
+        set `img_root` if your label file uses relative path.
+        """
+        self.path = path
+        self.img_root = img_root
+        self.image_label_separator = image_label_separator
 
-    @classmethod
-    def read(cls, path, img_root="", image_label_separator=None, debug=False):
-        logger = create_logger(cls.__name__, debug)
-        root = img_root if img_root else os.path.dirname(path)
-        sep = image_label_separator
-        if not sep:
-            sep = lambda ln: ln.strip().split()
+        self.mean_image_file = mean_image_file
+        self.scale = scale # default is 256 color(0-255)
+        self.color = color
 
-        with open(path, mode="r", encoding="utf-8") as f:
+        self._debug = debug
+        self._logger = create_logger(self.__class__.__name__, self._debug)
+
+    def read(self, with_conversion=True):
+
+        with open(self.path, mode="r", encoding="utf-8") as f:
             for line in f:
-                im_path, label = sep(line)
-                im_path = im_path if not root else os.path.join(root, im_path)
+                im_path, label = line.strip().split(self.image_label_separator)
+                im_path = im_path if not self.img_root else os.path.join(self.img_root, im_path)
                 try:
                     im = IM(im_path, label)
                     im.read()
-                    yield im
+                    c = im if not with_conversion else self.convert(im)
+                    yield c
                 except Exception as ex:
-                    logger.error(str(ex))
+                    self._logger.error(str(ex))
+
+    def make_mean_image(self, numpy_pkg, mean_image_file=""):
+        m_file = mean_image_file if mean_image_file else os.path.join(self.path, "../mean_image.png")
+        im_iterator = self.read(with_conversion=True)
+
+        sum_image = None
+        count = 0
+        for im in im_iterator:
+            arr = numpy_pkg.asarray(im.image)
+            if not sum_image:
+                sum_image = arr
+            else:
+                sum_image += arr
+            count += 1
+
+        mean = sum_image / count
+        mean_image = Image.fromarray(mean)
+        mean_image.save(m_file)
+        self.mean_image_file = m_file
+
+    def read_asarray(self, numpy_pkg, with_conversion=True):
+        mean = None
+        if self.mean_image_file:
+            if os.path.isfile(self.mean_image_file):
+                m_image = IM(self.mean_image_file)  # mean image is already `converted` when calculation.
+                mean = m_image.to_array(numpy_pkg, self.color)
+            else:
+                raise Exception("Mean image is not exist at {0}.".format(self.mean_image_file))
+        else:
+            self._logger.warning("Mean image is not set. So if you train the model, it will be difficult to converge.")
+
+        for im in self.read(with_conversion=with_conversion):
+            arr = im.to_array(numpy_pkg, color=self.color)
+            if mean:
+                arr -= mean
+                if self.scale > 0:
+                    arr /= self.scale
+            yield  arr
+
+    def result_to_image(self, numpy_pkg, arr, label=-1):
+        restore_arr = arr * self.scale
+
+        if self.mean_image_file and os.path.isfile(self.mean_image_file):
+            m_image = IM(self.mean_image_file)
+            mean = m_image.to_array(numpy_pkg, self.color)
+            restore_arr += mean
+
+        im = IM.from_array(restore_arr, label)
+        return im
+
+    def convert(self, im):
+        """
+        Please override this method if you want to resize/grascale the image.
+        Your conversion will be done in `read` when you set `with_conversion=True`.
+        """
+        return im
+
 
 
 class IM():
+    """
+    IM is Image Object.
+    """
 
     def __init__(self, path, label=-1):
         self.path = path # path to image file
@@ -94,6 +165,15 @@ class IM():
         img = img.transpose(2, 0, 1)
 
         return img
+
+    @classmethod
+    def from_array(cls, numpy_arr, label=-1):
+        # K x H x W -> H x W x K
+        original = numpy_arr.transpose(1, 2, 0)
+        image = Image.fromarray(original)
+        im = IM("", label)
+        im.image = image
+        return im
 
 
 class API():
