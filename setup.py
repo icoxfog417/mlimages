@@ -13,12 +13,12 @@ setup(
         "requests",
         "aiohttp"
     ],
-    version="0.2",
+    version="0.3",
     description="gather image data and create training data for machine learning",
     author="icoxfog417",
     author_email="icoxfog417@yahoo.co.jp",
     url="https://github.com/icoxfog417/mlimages",
-    download_url="https://github.com/icoxfog417/mlimages/tarball/0.2",
+    download_url="https://github.com/icoxfog417/mlimages/tarball/0.3",
     keywords = ["imagenet", "machine learning"],
     classifiers=[],
 )
