@@ -40,6 +40,22 @@ def make_label():
     lf = machine.label_dir_auto(label_file=LABEL_FILE, label_def_file=LABEL_DEF_FILE)
 
 
+def show(limit, shuffle=True):
+    td = TrainingData(LABEL_FILE, img_root=IMAGES_ROOT, image_property=IMAGE_PROP)
+    _limit = limit if limit > 0 else 5
+    iterator = td.fetch()
+    if shuffle:
+        import random
+        shuffled = list(iterator)
+        random.shuffle(shuffled)
+        iterator = iter(shuffled)
+
+    for i, im in enumerate(iterator):
+        im.image.show()
+        if i >= _limit - 1:
+            break
+
+
 def train(epoch=10, batch_size=32):
     td = TrainingData(LABEL_FILE, img_root=IMAGES_ROOT, image_property=IMAGE_PROP)
 
@@ -75,9 +91,10 @@ def train(epoch=10, batch_size=32):
         optimizer.lr *= 0.97
 
 
-def predict(limit=3):
-    td = TrainingData(LABEL_FILE, img_root=IMAGES_ROOT, mean_image_file=MEAN_IMAGE_FILE, image_property=IMAGE_PROP)
+def predict(limit):
+    _limit = limit if limit > 0 else 5
 
+    td = TrainingData(LABEL_FILE, img_root=IMAGES_ROOT, mean_image_file=MEAN_IMAGE_FILE, image_property=IMAGE_PROP)
     label_def = LabelingMachine.read_label_def(LABEL_DEF_FILE)
     model = alex.Alex(len(label_def))
     serializers.load_npz(MODEL_FILE, model)
@@ -93,15 +110,17 @@ def predict(limit=3):
         print("predict {0}, actual {1}".format(label_def[p], label_def[label]))
         im.image.show()
         i += 1
-        if i >= limit:
+        if i >= _limit:
             break
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Example of Imagenet x Alexnet")
-    parser.add_argument("task", type=str, help="task of script. g: gather image / l: make label / t: train model / p: predict")
-    parser.add_argument("-wnid", type=str, help="imagenet id (default is cats)", default="n02121808")
-    parser.add_argument("-limit", type=int, help="download image limit", default=-1)
+    parser = argparse.ArgumentParser(description="Example of Imagenet x AlexNet")
+    parser.add_argument("task", type=str, help="task of script. " + "".join([
+        "g: gather images", "l: make label file", "s: show training images (shuffle data when 'ss')",
+        "t: train model", "p: predict"
+    ]))
+    parser.add_argument("-wnid", type=str, help="imagenet id (default is cats(n02121808))", default="n02121808")
+    parser.add_argument("-limit", type=int, help="g: download image limit, s,p: show/predict image limit", default=-1)
 
     args = parser.parse_args()
 
@@ -110,7 +129,11 @@ if __name__ == "__main__":
     elif args.task == "l":
         print("create label data automatically.")
         make_label()
+    elif args.task == "s":
+        show(args.limit, shuffle=False)
+    elif args.task == "ss":
+        show(args.limit, shuffle=True)
     elif args.task == "t":
         train()
     elif args.task == "p":
-        predict()
+        predict(args.limit)
