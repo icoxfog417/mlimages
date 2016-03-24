@@ -1,7 +1,7 @@
 import os
 import asyncio
-from PIL import Image
 import numpy as np
+import pickle
 from mlimages.model import LabelFile, LabeledImage
 from mlimages.util.file_api import FileAPI
 
@@ -36,6 +36,7 @@ class TrainingData():
     def make_mean_image(self, mean_image_file=""):
         m_file = mean_image_file if mean_image_file else os.path.join(self.label_file.path, "./mean_image.png")
         l_file = FileAPI.add_ext_name(self.label_file.path, "_used_in_mean")
+        _, ext = os.path.splitext(os.path.basename(m_file))
         im_iterator = self.label_file._fetch_raw()
 
         sum_image = None
@@ -57,8 +58,11 @@ class TrainingData():
                     pass
 
         mean = sum_image / count
-        mean_image = LabeledImage.from_array(mean)
-        mean_image.image.save(m_file)
+        if ext.lower() == ".npy":
+            pickle.dump(mean, open(m_file, "wb"), -1)
+        else:
+            mean_image = LabeledImage.from_array(mean)
+            mean_image.image.save(m_file)
         self.mean_image_file = m_file
         self.label_file.path = l_file
 
@@ -73,9 +77,13 @@ class TrainingData():
         mean = None
         if self.mean_image_file:
             if os.path.isfile(self.mean_image_file):
-                m_image = LabeledImage(self.mean_image_file)  # mean image is already `converted` when calculation.
-                m_image.load()
-                mean = m_image.to_array(np, self.color)
+                _, ext = os.path.splitext(os.path.basename(self.mean_image_file))
+                if ext.lower() == ".npy":
+                    mean = pickle.load(open(self.mean_image_file, "rb"))
+                else:
+                    m_image = LabeledImage(self.mean_image_file)  # mean image is already `converted` when calculation.
+                    m_image.load()
+                    mean = m_image.to_array(np, self.color)
             else:
                 raise Exception("Mean image is not exist at {0}.".format(self.mean_image_file))
         else:

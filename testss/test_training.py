@@ -24,6 +24,17 @@ class TestLabel(TestCase):
         os.remove(mean_image_file)
         os.remove(td.label_file.path)
 
+    def test_mean_numpy(self):
+        td = self.get_testdata()
+        mean_numpy_file = os.path.join(os.path.dirname(td.label_file.path), "mean_image.npy")
+        td.make_mean_image(mean_numpy_file)
+
+        generated = list(td.generate())
+        self.assertTrue(len(list(generated)) > 0)
+
+        os.remove(mean_numpy_file)
+        os.remove(td.label_file.path)
+
     def test_batch(self):
 
         # prepare

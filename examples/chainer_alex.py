@@ -50,8 +50,6 @@ def train(epoch=10, batch_size=32):
     else:
         td.mean_image_file = MEAN_IMAGE_FILE
 
-    td.shuffle(overwrite=True)
-
     # train model
     #  setup
     print("begin training the model.")
@@ -64,6 +62,7 @@ def train(epoch=10, batch_size=32):
 
     for i in range(epoch):
         print("epoch_{0}: (learning rate={1})".format(i, optimizer.lr))
+        td.shuffle(overwrite=True)
 
         for x_batch, y_batch in td.generate_batches(batch_size):
             x = chainer.Variable(np.asarray(x_batch))
@@ -112,6 +111,6 @@ if __name__ == "__main__":
         print("create label data automatically.")
         make_label()
     elif args.task == "t":
-        train(batch_size=16)
+        train()
     elif args.task == "p":
         predict()
