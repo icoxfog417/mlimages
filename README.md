@@ -90,8 +90,8 @@ for d in td.generate():
 
 ```
 
-And also, you can restore the image from model output.
+And also, you can restore the image from data.
 
 ```py
-image = td.result_to_image(model_output_numpy_array, label)
+image = td.result_to_image(numpy_array, label)
 ```

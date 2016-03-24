@@ -60,6 +60,12 @@ class FileAPI():
                     rel = os.path.join(reldir, f)
                     yield rel
 
+    @classmethod
+    def add_ext_name(cls, path, ext_name):
+        name, ext = os.path.splitext(os.path.basename(path))
+        added = os.path.join(os.path.dirname(path), name + ext_name + ext)
+        return added
+
     def write_iter(self, path, mode, iterator):
         _m = "ab" if mode in ("a", "ab") else "wb"
         with open(path, mode=_m) as f:

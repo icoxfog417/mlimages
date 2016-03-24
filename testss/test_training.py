@@ -19,8 +19,10 @@ class TestLabel(TestCase):
         lines = list(lf.fetch())
         generated = list(td.generate())
         self.assertEqual(len(lines), len(generated))
+        self.assertNotEqual(lf.path, td.label_file.path)
 
         os.remove(mean_image_file)
+        os.remove(td.label_file.path)
 
     def test_batch(self):
         lf = self.get_label_file()

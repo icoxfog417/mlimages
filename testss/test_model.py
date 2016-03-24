@@ -22,6 +22,7 @@ class TestModel(TestCase):
             im.image.show("crop image")
 
             im.downscale(200)
+            self.assertEquals((200, 200), im.image.size)
             im.image.show("resize image")
 
             im.crop_from_center(220)

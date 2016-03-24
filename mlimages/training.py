@@ -3,6 +3,7 @@ import asyncio
 from PIL import Image
 import numpy as np
 from mlimages.model import LabelFile, LabeledImage
+from mlimages.util.file_api import FileAPI
 
 
 class TrainingData():
@@ -29,29 +30,37 @@ class TrainingData():
 
         return _im
 
-    def shuffle(self):
-        self.label_file.shuffle()
+    def shuffle(self, overwrite=False):
+        self.label_file.shuffle(overwrite=overwrite)
 
     def make_mean_image(self, mean_image_file=""):
         m_file = mean_image_file if mean_image_file else os.path.join(self.label_file.path, "./mean_image.png")
-        im_iterator = self.label_file.fetch()
+        l_file = FileAPI.add_ext_name(self.label_file.path, "_used_in_mean")
+        im_iterator = self.label_file._fetch_raw()
 
         sum_image = None
         count = 0
-        for im in im_iterator:
-            converted = self.convert(im)
-            arr = np.asarray(converted.image)
-            if sum_image is None:
-                sum_image = np.ndarray(arr.shape)
-                sum_image[:] = arr
-            else:
-                sum_image += arr
-            count += 1
+
+        with open(l_file, mode="w", encoding="utf-8") as f:
+            for im, line in im_iterator:
+                try:
+                    converted = self.convert(im)
+                    arr = converted.to_array(np)
+                    if sum_image is None:
+                        sum_image = np.ndarray(arr.shape)
+                        sum_image[:] = arr
+                    else:
+                        sum_image += arr
+                    count += 1
+                    f.write(line)
+                except:
+                    pass
 
         mean = sum_image / count
-        mean_image = Image.fromarray(mean.astype(np.uint8))
-        mean_image.save(m_file)
+        mean_image = LabeledImage.from_array(mean)
+        mean_image.image.save(m_file)
         self.mean_image_file = m_file
+        self.label_file.path = l_file
 
     def generate(self):
         mean = self.__load_mean()
@@ -87,7 +96,9 @@ class TrainingData():
         async def to_array(im):
             im.load()
             converted = self.convert(im)
-            return self.__to_array(converted, mean), im.label
+            arr = self.__to_array(converted, mean)
+            im.image = None  # don't use image any more, so release reference
+            return arr, im.label
 
         batch = []
         loop = asyncio.get_event_loop()
@@ -98,18 +109,25 @@ class TrainingData():
             if len(batch) == size:
                 tasks = asyncio.wait(batch)
                 done, pending = loop.run_until_complete(tasks)
-                x_sample, y_sample = list(done)[0].result()
+                results = []
+                for d in done:
+                    try:
+                        results.append(d.result())
+                    except:
+                        pass
+
+                x_sample, y_sample = results[0]
                 x_batch = np.ndarray((size,) + x_sample.shape, x_sample.dtype)
                 y_batch = np.ndarray((size,), np.int32)
 
-                for j, d in enumerate(done):
-                    x_batch[j], y_batch[j] = d.result()
+                for j, r in enumerate(results):
+                    x_batch[j], y_batch[j] = r
 
                 yield x_batch, y_batch
                 i = 0
                 batch.clear()
 
-    def result_to_image(self, arr, label=-1):
+    def data_to_image(self, arr, label=-1):
         restore_arr = arr * self.scale
 
         if self.mean_image_file and os.path.isfile(self.mean_image_file):

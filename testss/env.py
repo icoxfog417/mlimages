@@ -16,7 +16,7 @@ def get_label_file_path():
 
 
 def get_image_path():
-    p = os.path.join(os.path.dirname(__file__), "data_imread/glacier/one.jpg")
+    p = os.path.join(os.path.dirname(__file__), "data_imread/glacier/two.jpg")
     return p
 
 

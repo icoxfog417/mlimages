@@ -20,8 +20,8 @@ class ImagenetAPI(API):
             wnids = self._get_subsets(wnid)
             path = self.file_api.join_relative(relative, f)
             downloads = asyncio.wait([self.download_images(session, wnid, path) for wnid in wnids])
-            fs = loop.run_until_complete(downloads)
-            folders += [f.result() for f in fs[0]]
+            done, pending = loop.run_until_complete(downloads)
+            folders += [d.result() for d in done]
 
         session.close()
 

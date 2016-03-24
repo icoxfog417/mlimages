@@ -1,6 +1,7 @@
 import os
 import random
 from PIL import Image
+from mlimages.util.file_api import FileAPI
 import mlimages.util.log_api as LogAPI
 
 
@@ -22,6 +23,10 @@ class LabelFile():
         self._logger = LogAPI.create_logger(self.__class__.__name__, self._debug)
 
     def fetch(self, load_image=True):
+        for im, _ in self._fetch_raw(load_image=load_image):
+            yield im
+
+    def _fetch_raw(self, load_image=True):
 
         with open(self.path, mode="r", encoding="utf-8") as f:
             for line in f:
@@ -31,29 +36,25 @@ class LabelFile():
                     im = LabeledImage(im_path, label)
                     if load_image:
                         im.load()
-                    yield im
+                    yield im, line
                 except Exception as ex:
                     self._logger.error(str(ex))
+                    pass
 
-    def shuffle(self):
+    def shuffle(self, overwrite=False):
         """
         This method creates new shuffled file.
         """
 
-        name, ext = os.path.splitext(os.path.basename(self.path))
-        shuffled = name + "_shuffled" + ext
-        shuffled = os.path.join(os.path.dirname(self.path), shuffled)
+        if overwrite:
+            shuffled = self.path
+        else:
+            shuffled = FileAPI.add_ext_name(self.path, "_shuffled")
 
         lines = open(self.path).readlines()
         random.shuffle(lines)
         open(shuffled, "w").writelines(lines)
         self.path = shuffled
-
-    def to_training_data(self, image_property=None):
-        from mlimages.training import TrainingData
-        td = TrainingData(self.path, img_root=self.img_root, image_label_separator=self.image_label_separator,
-                          image_property=image_property, debug=self._debug)
-        return td
 
 
 class LabeledImage():
@@ -73,7 +74,25 @@ class LabeledImage():
 
     def downscale(self, width, height=-1):
         h = height if height > 0 else width
-        self.image.thumbnail((width, h))
+
+        if self.image.size[0] >= width:
+            target_v_ratio = h / width
+            actual_v_ratio = self.image.size[1] / self.image.size[0]
+
+            if target_v_ratio != actual_v_ratio:
+                if actual_v_ratio > 1:
+                    # height > width
+                    _w = self.image.size[0]
+                    self.crop_from_center(_w, int(target_v_ratio * _w))
+                else:
+                    # height < width
+                    _h = self.image.size[1]
+                    self.crop_from_center(int(target_v_ratio * _h), _h)
+
+            self.image.thumbnail((width, h))
+        else:
+            self.crop_from_center(width, height)
+
         return self
 
     def crop_from_lefttop(self, left, top, width, height=-1):
