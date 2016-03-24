@@ -71,7 +71,7 @@ class TrainingData():
 
         for im in self.fetch():
             arr = self.__to_array(im, mean)
-            yield  arr, im.label
+            yield  arr, im
 
     def __load_mean(self):
         mean = None
@@ -135,10 +135,10 @@ class TrainingData():
                 i = 0
                 batch.clear()
 
-    def data_to_image(self, arr, label=-1):
+    def data_to_image(self, arr, label=-1, raw=False):
         restore_arr = arr * self.scale
 
-        if self.mean_image_file and os.path.isfile(self.mean_image_file):
+        if not raw and self.mean_image_file and os.path.isfile(self.mean_image_file):
             m_image = LabeledImage(self.mean_image_file)
             mean = m_image.load().to_array(np, self.color)
             restore_arr += mean

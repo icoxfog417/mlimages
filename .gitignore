@@ -73,4 +73,5 @@ target/
 
 venv
 tests/data
+testss/data
 examples/data

@@ -41,18 +41,22 @@ def make_label():
 
 
 def show(limit, shuffle=True):
-    td = TrainingData(LABEL_FILE, img_root=IMAGES_ROOT, image_property=IMAGE_PROP)
+    td = TrainingData(LABEL_FILE, img_root=IMAGES_ROOT, mean_image_file=MEAN_IMAGE_FILE, image_property=IMAGE_PROP)
     _limit = limit if limit > 0 else 5
-    iterator = td.fetch()
+    iterator = td.generate()
     if shuffle:
         import random
         shuffled = list(iterator)
         random.shuffle(shuffled)
         iterator = iter(shuffled)
 
-    for i, im in enumerate(iterator):
-        im.image.show()
-        if i >= _limit - 1:
+    i = 0
+    for arr, im in iterator:
+        restored = td.data_to_image(arr, im.label, raw=True)
+        print(im.path)
+        restored.image.show()
+        i += 1
+        if i >= _limit:
             break
 
 
@@ -67,8 +71,6 @@ def train(epoch=10, batch_size=32):
         td.mean_image_file = MEAN_IMAGE_FILE
 
     # train model
-    #  setup
-    print("begin training the model.")
     label_def = LabelingMachine.read_label_def(LABEL_DEF_FILE)
     model = alex.Alex(len(label_def))
     optimizer = optimizers.MomentumSGD(lr=0.01, momentum=0.9)
@@ -76,8 +78,9 @@ def train(epoch=10, batch_size=32):
     epoch = epoch
     batch_size = batch_size
 
+    print("begin training the model. {0} classification task.".format(len(label_def)))
     for i in range(epoch):
-        print("epoch_{0}: (learning rate={1})".format(i, optimizer.lr))
+        print("epoch {0}/{1}: (learning rate={2})".format(i + 1, epoch, optimizer.lr))
         td.shuffle(overwrite=True)
 
         for x_batch, y_batch in td.generate_batches(batch_size):
@@ -100,14 +103,13 @@ def predict(limit):
     serializers.load_npz(MODEL_FILE, model)
 
     i = 0
-    for arr, label in td.generate():
+    for arr, im in td.generate():
         x = np.ndarray((1,) + arr.shape, arr.dtype)
         x[0] = arr
         x = chainer.Variable(np.asarray(x), volatile="on")
         y = model.predict(x)
         p = np.argmax(y.data)
-        im = td.data_to_image(arr)
-        print("predict {0}, actual {1}".format(label_def[p], label_def[label]))
+        print("predict {0}, actual {1}".format(label_def[p], label_def[im.label]))
         im.image.show()
         i += 1
         if i >= _limit:

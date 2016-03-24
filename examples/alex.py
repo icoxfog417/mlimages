@@ -21,8 +21,10 @@ class Alex(chainer.Chain):
             conv5=L.Convolution2D(384, 256,  3, pad=1),
             fc6=L.Linear(9216, 4096),
             fc7=L.Linear(4096, 4096),
-            fc8=L.Linear(4096, label_count),
+            fc8=L.Linear(4096, 1024),
+            fc9=L.Linear(1024, label_count)
         )
+        # extend a little layer
         self.train = True
 
     def clear(self):
@@ -46,6 +48,7 @@ class Alex(chainer.Chain):
         h = F.max_pooling_2d(F.relu(self.conv5(h)), 3, stride=2)
         h = F.dropout(F.relu(self.fc6(h)), train=self.train)
         h = F.dropout(F.relu(self.fc7(h)), train=self.train)
-        h = self.fc8(h)
+        h = F.dropout(F.relu(self.fc8(h)), train=self.train)
+        h = self.fc9(h)
 
         return h

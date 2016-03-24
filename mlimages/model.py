@@ -75,7 +75,7 @@ class LabeledImage():
     def downscale(self, width, height=-1):
         h = height if height > 0 else width
 
-        if self.image.size[0] >= width:
+        if self.image.size[0] >= width and self.image.size[1] >= height:
             target_v_ratio = h / width
             actual_v_ratio = self.image.size[1] / self.image.size[0]
 
