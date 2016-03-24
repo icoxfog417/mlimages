@@ -132,7 +132,7 @@ class TrainingData():
 
         if self.mean_image_file and os.path.isfile(self.mean_image_file):
             m_image = LabeledImage(self.mean_image_file)
-            mean = m_image.to_array(np, self.color)
+            mean = m_image.load().to_array(np, self.color)
             restore_arr += mean
 
         im = LabeledImage.from_array(restore_arr, label)

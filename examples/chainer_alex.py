@@ -3,6 +3,10 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 import argparse
 import numpy as np
+import chainer
+from chainer import optimizers
+from chainer import serializers
+import alex
 from mlimages.gather.imagenet import ImagenetAPI
 from mlimages.label import LabelingMachine
 from mlimages.training import TrainingData
@@ -37,11 +41,6 @@ def make_label():
 
 
 def train(epoch=10, batch_size=32):
-    import chainer
-    from chainer import optimizers
-    from chainer import serializers
-    import alex
-
     td = TrainingData(LABEL_FILE, img_root=IMAGES_ROOT, image_property=IMAGE_PROP)
 
     # make mean image
@@ -64,7 +63,7 @@ def train(epoch=10, batch_size=32):
     batch_size = batch_size
 
     for i in range(epoch):
-        print("epoch_{0}: (learning rate={1})".format(epoch, optimizer.lr))
+        print("epoch_{0}: (learning rate={1})".format(i, optimizer.lr))
 
         for x_batch, y_batch in td.generate_batches(batch_size):
             x = chainer.Variable(np.asarray(x_batch))
@@ -78,10 +77,7 @@ def train(epoch=10, batch_size=32):
 
 
 def predict(limit=3):
-    from chainer import serializers
-    import alex
-
-    td = TrainingData(LABEL_FILE, img_root=IMAGES_ROOT, image_property=IMAGE_PROP)
+    td = TrainingData(LABEL_FILE, img_root=IMAGES_ROOT, mean_image_file=MEAN_IMAGE_FILE, image_property=IMAGE_PROP)
 
     label_def = LabelingMachine.read_label_def(LABEL_DEF_FILE)
     model = alex.Alex(len(label_def))
@@ -89,8 +85,11 @@ def predict(limit=3):
 
     i = 0
     for arr, label in td.generate():
-        y = model.predict(arr)
-        p = np.argmax(y)
+        x = np.ndarray((1,) + arr.shape, arr.dtype)
+        x[0] = arr
+        x = chainer.Variable(np.asarray(x), volatile="on")
+        y = model.predict(x)
+        p = np.argmax(y.data)
         im = td.data_to_image(arr)
         print("predict {0}, actual {1}".format(label_def[p], label_def[label]))
         im.image.show()
