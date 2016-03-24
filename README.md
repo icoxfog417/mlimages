@@ -2,6 +2,9 @@
 
 gather and create image dataset for machine learning.
 
+![imagenet](./doc/mlimages.PNG)
+
+
 ## How to use
 
 ```
