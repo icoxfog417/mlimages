@@ -1,36 +1,34 @@
 import os
 from unittest import TestCase
-from mlimages.model import LabelFile, ImageProperty
+from mlimages.model import ImageProperty
+from mlimages.training import TrainingData
 import testss.env as env
 
 
 class TestLabel(TestCase):
 
     def test_make_mean(self):
-        lf = self.get_label_file()
-        mean_image_file = os.path.join(os.path.dirname(lf.path), "mean_image.png")
-        imp = ImageProperty(32)
+        td = self.get_testdata()
+        mean_image_file = os.path.join(os.path.dirname(td.label_file.path), "mean_image.png")
 
-        td = lf.to_training_data(imp)
+        pre_fetch = list(td.label_file.fetch())
+        pre_path = td.label_file.path
         td.make_mean_image(mean_image_file)
 
         self.assertTrue(os.path.isfile(mean_image_file))
 
-        lines = list(lf.fetch())
         generated = list(td.generate())
-        self.assertEqual(len(lines), len(generated))
-        self.assertNotEqual(lf.path, td.label_file.path)
+        self.assertEqual(len(pre_fetch), len(generated))
+        self.assertNotEqual(pre_path, td.label_file.path)
 
         os.remove(mean_image_file)
         os.remove(td.label_file.path)
 
     def test_batch(self):
-        lf = self.get_label_file()
-        mean_image_file = os.path.join(os.path.dirname(lf.path), "mean_image.png")
-        imp = ImageProperty(32)
 
         # prepare
-        td = lf.to_training_data(imp)
+        td = self.get_testdata()
+        mean_image_file = os.path.join(os.path.dirname(td.label_file.path), "mean_image.png")
         td.make_mean_image(mean_image_file)
 
         # make batch data
@@ -46,9 +44,10 @@ class TestLabel(TestCase):
         os.remove(td.label_file.path)
 
 
-    def get_label_file(self):
+    def get_testdata(self):
         p = env.get_label_file_path()
         img_root = os.path.dirname(p)
-        lf = LabelFile(p, img_root=img_root)
+        prop = ImageProperty(32)
+        td = TrainingData(p, img_root=img_root, image_property=prop)
 
-        return lf
+        return td
