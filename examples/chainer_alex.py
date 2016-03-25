@@ -4,6 +4,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 import argparse
 import numpy as np
 import chainer
+from chainer import cuda
 from chainer import optimizers
 from chainer import serializers
 import alex
@@ -60,7 +61,11 @@ def show(limit, shuffle=True):
             break
 
 
-def train(epoch=10, batch_size=32):
+def train(epoch=10, batch_size=32, gpu=False):
+    if gpu:
+        cuda.check_cuda_available()
+    xp = cuda.cupy if gpu else np
+
     td = TrainingData(LABEL_FILE, img_root=IMAGES_ROOT, image_property=IMAGE_PROP)
 
     # make mean image
@@ -78,14 +83,19 @@ def train(epoch=10, batch_size=32):
     epoch = epoch
     batch_size = batch_size
 
-    print("begin training the model. {0} classification task.".format(len(label_def)))
+    print("Now our model is {0} classification task.".format(len(label_def)))
+    print("begin training the model. epoch:{0} batch size:{1}.".format(epoch, batch_size))
+
+    if gpu:
+        model.to_gpu()
+
     for i in range(epoch):
         print("epoch {0}/{1}: (learning rate={2})".format(i + 1, epoch, optimizer.lr))
         td.shuffle(overwrite=True)
 
         for x_batch, y_batch in td.generate_batches(batch_size):
-            x = chainer.Variable(np.asarray(x_batch))
-            t = chainer.Variable(np.asarray(y_batch))
+            x = chainer.Variable(xp.asarray(x_batch))
+            t = chainer.Variable(xp.asarray(y_batch))
 
             optimizer.update(model, x, t)
             print("loss: {0}, accuracy: {1}".format(float(model.loss.data), float(model.accuracy.data)))
@@ -123,6 +133,9 @@ if __name__ == "__main__":
     ]))
     parser.add_argument("-wnid", type=str, help="imagenet id (default is cats(n02121808))", default="n02121808")
     parser.add_argument("-limit", type=int, help="g: download image limit, s,p: show/predict image limit", default=-1)
+    parser.add_argument("-epoch", type=int, help="when t: epoch count", default=10)
+    parser.add_argument("-batchsize", type=int, help="when t: batch size", default=32)
+    parser.add_argument("-gpu", action="store_true", help="when t: use gpu")
 
     args = parser.parse_args()
 
@@ -136,6 +149,6 @@ if __name__ == "__main__":
     elif args.task == "ss":
         show(args.limit, shuffle=True)
     elif args.task == "t":
-        train()
+        train(epoch=args.epoch, batch_size=args.batchsize, gpu=args.gpu)
     elif args.task == "p":
         predict(args.limit)
