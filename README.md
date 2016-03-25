@@ -11,9 +11,10 @@ gather and create image dataset for machine learning.
 pip install mlimages
 ```
 
-**This tool dependes on Python 3.5**
+Or clone the repository. Then you can execute examples.
+If you want to do fine tuning, you can download pretrained model in `examples/pretrained` by [git lfs](https://git-lfs.github.com/).
 
-(but it works quickly because of async/await feature)
+This tool dependes on Python 3.5 that has async/await feature!
 
 
 ## Gather Images
