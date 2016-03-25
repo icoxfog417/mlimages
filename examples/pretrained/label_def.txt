@@ -1,0 +1,15 @@
+0 abyssinian
+1 alley_cat
+2 angora
+3 burmese_cat
+4 egyptian_cat
+5 kitty
+6 manx
+7 mouser
+8 persian_cat
+9 siamese_cat
+10 tabby
+11 tiger_cat
+12 tom
+13 tortoiseshell
+14 ROOT
