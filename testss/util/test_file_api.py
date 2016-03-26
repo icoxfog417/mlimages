@@ -1,8 +1,6 @@
 import os
-import sys
 from unittest import TestCase
 from mlimages.util.file_api import FileAPI
-sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 from testss.env import get_data_folder
 
 
