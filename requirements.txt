@@ -1,4 +1,4 @@
-aiohttp==0.21.2
+aiohttp==3.7.4
 chainer==1.7.1
 chardet==2.3.0
 filelock==2.0.5
